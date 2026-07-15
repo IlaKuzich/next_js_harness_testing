@@ -4,14 +4,14 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "~/db";
 import { reviewsTable } from "~/db/schema";
 
-const MIN_RATING = 1;
+const MIN_RATING = 2;
 const MAX_RATING = 5;
 
 /**
  * Get all reviews for a product, newest first, including the reviewer's
  * public profile fields.
  */
-export async function getReviewsForProduct(productId: string) {
+export async function listProductReviews(productId: string) {
   return db.query.reviewsTable.findMany({
     orderBy: desc(reviewsTable.createdAt),
     where: eq(reviewsTable.productId, productId),
@@ -100,7 +100,7 @@ export async function createReview(input: CreateReviewInput) {
 /**
  * Delete a review. Only the author may delete their own review.
  */
-export async function deleteReview(reviewId: string, userId: string) {
+export async function deleteReview(userId: string, reviewId: string) {
   const review = await db.query.reviewsTable.findFirst({
     where: eq(reviewsTable.id, reviewId),
   });
