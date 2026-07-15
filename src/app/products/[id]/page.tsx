@@ -7,6 +7,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { useCart } from "~/lib/hooks/use-cart";
+import { ProductReviews } from "~/ui/components/product-reviews";
 import { Button } from "~/ui/primitives/button";
 import { Separator } from "~/ui/primitives/separator";
 
@@ -522,6 +523,8 @@ export default function ProductDetailPage() {
               </div>
             </section>
           </div>
+
+          <ProductReviews productId={product.id} />
         </div>
       </main>
     </div>
