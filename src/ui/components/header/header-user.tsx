@@ -1,6 +1,7 @@
 import {
   BarChart,
   LogOut,
+  Package,
   Settings,
   Shield,
   Upload,
@@ -110,6 +111,12 @@ export function HeaderUserDropdown({
           <Link className="cursor-pointer" href="/dashboard/uploads">
             <Upload className="mr-2 h-4 w-4" />
             Uploads
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link className="cursor-pointer" href="/orders">
+            <Package className="mr-2 h-4 w-4" />
+            Orders
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
