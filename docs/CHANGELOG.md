@@ -8,7 +8,7 @@ all notable changes to this project are documented here. the format loosely foll
 
 ### added
 
-- project documentation: `ARCHITECTURE.md`, `CONTRIBUTING.md`, and per-domain docs under `docs/`.
+- project documentation: `ARCHITECTURE.md`, `CONTRIBUTING.md` under `docs/`, and per-domain specs under `specs/`.
 
 ### changed
 
