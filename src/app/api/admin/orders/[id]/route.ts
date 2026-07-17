@@ -28,6 +28,7 @@ export async function PATCH(
 
   const { id } = await params;
   const payload = (await request.json().catch(() => null)) as null | {
+    expectedStatus?: string;
     status?: string;
   };
 
@@ -41,8 +42,20 @@ export async function PATCH(
     );
   }
 
+  if (
+    payload.expectedStatus &&
+    !VALID_STATUSES.includes(payload.expectedStatus as OrderStatus)
+  ) {
+    return NextResponse.json(
+      { error: `expectedStatus must be one of: ${VALID_STATUSES.join(", ")}` },
+      { status: 400 },
+    );
+  }
+
   try {
-    const order = await updateOrderStatus(id, payload.status as OrderStatus);
+    const order = await updateOrderStatus(id, payload.status as OrderStatus, {
+      expectedStatus: payload.expectedStatus as OrderStatus | undefined,
+    });
     return NextResponse.json({ order });
   } catch (error) {
     const message =
