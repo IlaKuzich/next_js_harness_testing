@@ -1,6 +1,6 @@
 # architecture
 
-a short map of how the codebase is laid out and how a request flows through it. for the day-to-day command list see [`README.md`](./README.md); for contributor workflow see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+a short map of how the codebase is laid out and how a request flows through it. for the day-to-day command list see [`README.md`](../README.md); for contributor workflow see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## stack at a glance
 
@@ -57,9 +57,9 @@ routes under `src/app` split server and client concerns. `page.tsx` is a server 
 
 | domain | service | tables | docs |
 |--------|---------|--------|------|
-| orders | `src/api/orders/service.ts` | `orders`, `order_items` | [docs/orders.md](./docs/orders.md) |
-| reviews | `src/api/reviews/service.ts` | `reviews` | [docs/reviews.md](./docs/reviews.md) |
-| payments | `src/api/payments/service.ts` | `polar_customer`, `polar_subscription` | [docs/payments.md](./docs/payments.md) |
+| orders | `src/api/orders/service.ts` | `orders`, `order_items` | [specs/orders.md](../specs/orders.md) |
+| reviews | `src/api/reviews/service.ts` | `reviews` | [specs/reviews.md](../specs/reviews.md) |
+| payments | `src/api/payments/service.ts` | `polar_customer`, `polar_subscription` | [specs/payments.md](../specs/payments.md) |
 
 ## configuration
 
