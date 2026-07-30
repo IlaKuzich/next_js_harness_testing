@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useCart } from "~/lib/hooks/use-cart";
 import { ProductReviews } from "~/ui/components/product-reviews";
+import { WishlistButton } from "~/ui/components/wishlist-button";
 import { Button } from "~/ui/primitives/button";
 import { Separator } from "~/ui/primitives/separator";
 
@@ -476,6 +477,18 @@ export default function ProductDetailPage() {
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {isAdding ? "Adding…" : "Add to Cart"}
                 </Button>
+
+                {/* Save for later */}
+                <WishlistButton
+                  product={{
+                    category: product.category,
+                    id: product.id,
+                    image: product.image,
+                    name: product.name,
+                    price: product.price,
+                  }}
+                  variant="full"
+                />
               </div>
             </div>
           </div>

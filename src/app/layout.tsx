@@ -8,6 +8,7 @@ import { extractRouterConfig } from "uploadthing/server";
 import { SEO_CONFIG } from "~/app";
 import { ourFileRouter } from "~/app/api/uploadthing/core";
 import { CartProvider } from "~/lib/hooks/use-cart";
+import { WishlistProvider } from "~/lib/hooks/use-wishlist";
 import "~/css/globals.css";
 import { Footer } from "~/ui/components/footer";
 import { Header } from "~/ui/components/header/header";
@@ -54,10 +55,12 @@ export default function RootLayout({
         >
           <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
           <CartProvider>
-            <Header showAuth={true} />
-            <main className={`flex min-h-screen flex-col`}>{children}</main>
-            <Footer />
-            <Toaster />
+            <WishlistProvider>
+              <Header showAuth={true} />
+              <main className={`flex min-h-screen flex-col`}>{children}</main>
+              <Footer />
+              <Toaster />
+            </WishlistProvider>
           </CartProvider>
         </ThemeProvider>
         <SpeedInsights />

@@ -4,8 +4,10 @@ import { Heart, ShoppingCart, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { cn } from "~/lib/cn";
+import { useWishlist } from "~/lib/hooks/use-wishlist";
 import { Badge } from "~/ui/primitives/badge";
 import { Button } from "~/ui/primitives/button";
 import { Card, CardContent, CardFooter } from "~/ui/primitives/card";
@@ -39,7 +41,11 @@ export function ProductCard({
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = React.useState(false);
   const [isAddingToCart, setIsAddingToCart] = React.useState(false);
-  const [isInWishlist, setIsInWishlist] = React.useState(false);
+
+  // the heart reflects the shared, server-backed wishlist rather than local
+  // component state, so it stays in sync across the grid and the wishlist page
+  const { isSaved, toggle } = useWishlist();
+  const isInWishlist = isSaved(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,12 +59,25 @@ export function ProductCard({
     }
   };
 
-  const handleAddToWishlist = (e: React.MouseEvent) => {
+  const handleAddToWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (onAddToWishlist) {
-      setIsInWishlist(!isInWishlist);
-      onAddToWishlist(product.id);
+    try {
+      const nowSaved = await toggle({
+        category: product.category,
+        id: product.id,
+        image: product.image,
+        name: product.name,
+        price: product.price,
+      });
+      toast.success(
+        nowSaved ? "Added to your wishlist" : "Removed from your wishlist",
+      );
+    } catch {
+      toast.error("Couldn't update your wishlist. Please sign in and retry.");
+      return;
     }
+    // keep the optional callback for callers that want to react to the change
+    onAddToWishlist?.(product.id);
   };
 
   const discount = product.originalPrice
@@ -156,7 +175,7 @@ export function ProductCard({
                 `,
                 !isHovered && !isInWishlist && "opacity-0"
               )}
-              onClick={handleAddToWishlist}
+              onClick={(e) => void handleAddToWishlist(e)}
               size="icon"
               type="button"
               variant="outline"

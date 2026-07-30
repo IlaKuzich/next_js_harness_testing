@@ -9,6 +9,7 @@ import { SEO_CONFIG } from "~/app";
 import { useCurrentUser } from "~/lib/auth-client";
 import { cn } from "~/lib/cn";
 import { Cart } from "~/ui/components/cart";
+import { WishlistIndicator } from "~/ui/components/wishlist-indicator";
 import { Button } from "~/ui/primitives/button";
 import { Skeleton } from "~/ui/primitives/skeleton";
 
@@ -29,6 +30,7 @@ export function Header({ showAuth = true }: HeaderProps) {
   const mainNavigation = [
     { href: "/", name: "Home" },
     { href: "/products", name: "Products" },
+    { href: "/wishlist", name: "Wishlist" },
   ];
 
   const dashboardNavigation = [
@@ -121,6 +123,13 @@ export function Header({ showAuth = true }: HeaderProps) {
                 <Skeleton className={`h-9 w-9 rounded-full`} />
               ) : (
                 <Cart />
+              ))}
+
+            {!isDashboard &&
+              (isPending ? (
+                <Skeleton className={`h-9 w-9 rounded-full`} />
+              ) : (
+                <WishlistIndicator />
               ))}
 
             {isPending ? (
