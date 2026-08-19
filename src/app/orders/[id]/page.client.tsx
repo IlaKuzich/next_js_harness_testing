@@ -7,9 +7,21 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { OrderStatus } from "~/db/schema/orders/types";
+import type { ReturnStatus } from "~/db/schema/returns/types";
 
 import { OrderStatusBadge } from "~/ui/components/order-status-badge";
+import { ReturnStatusBadge } from "~/ui/components/return-status-badge";
 import { Button } from "~/ui/primitives/button";
+import { Checkbox } from "~/ui/primitives/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/ui/primitives/dialog";
+import { Input } from "~/ui/primitives/input";
+import { Label } from "~/ui/primitives/label";
 import { Separator } from "~/ui/primitives/separator";
 
 /* -------------------------------------------------------------------------- */
@@ -44,6 +56,12 @@ interface OrderItemDetail {
   unitPrice: number;
 }
 
+interface ReturnSummary {
+  id: string;
+  reason: string;
+  status: ReturnStatus;
+}
+
 const CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
   currency: "USD",
   style: "currency",
@@ -68,6 +86,18 @@ export default function OrderDetailPageClient({
   const [isLoading, setIsLoading] = React.useState(true);
   const [isCancelling, setIsCancelling] = React.useState(false);
 
+  const [existingReturn, setExistingReturn] =
+    React.useState<null | ReturnSummary>(null);
+  const [returnDialogOpen, setReturnDialogOpen] = React.useState(false);
+  const [selectedItemIds, setSelectedItemIds] = React.useState<Set<string>>(
+    new Set(),
+  );
+  const [returnQuantities, setReturnQuantities] = React.useState<
+    Record<string, number>
+  >({});
+  const [returnReason, setReturnReason] = React.useState("");
+  const [isSubmittingReturn, setIsSubmittingReturn] = React.useState(false);
+
   const loadOrder = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -90,9 +120,95 @@ export default function OrderDetailPageClient({
     }
   }, [orderId]);
 
+  const loadReturn = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/returns?orderId=${orderId}`);
+      const data = (await response.json()) as {
+        error?: string;
+        returns?: ReturnSummary[];
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to load return status");
+      }
+
+      const active = (data.returns ?? []).find(
+        (returnRequest) =>
+          returnRequest.status === "requested" ||
+          returnRequest.status === "approved" ||
+          returnRequest.status === "refunded",
+      );
+      setExistingReturn(active ?? data.returns?.[0] ?? null);
+    } catch (error) {
+      console.error("Error loading return status:", error);
+    }
+  }, [orderId]);
+
   React.useEffect(() => {
     void loadOrder();
-  }, [loadOrder]);
+    void loadReturn();
+  }, [loadOrder, loadReturn]);
+
+  const openReturnDialog = () => {
+    setSelectedItemIds(new Set());
+    setReturnQuantities(
+      Object.fromEntries(
+        order?.items.map((item) => [item.id, item.quantity]) ?? [],
+      ),
+    );
+    setReturnReason("");
+    setReturnDialogOpen(true);
+  };
+
+  const toggleItem = (itemId: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const handleSubmitReturn = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const items = [...selectedItemIds].map((itemId) => ({
+      orderItemId: itemId,
+      quantity: returnQuantities[itemId] ?? 1,
+    }));
+
+    if (items.length === 0) {
+      toast.error("Select at least one item to return");
+      return;
+    }
+
+    setIsSubmittingReturn(true);
+    try {
+      const response = await fetch("/api/returns", {
+        body: JSON.stringify({ items, orderId, reason: returnReason }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to request return");
+      }
+
+      toast.success("Return requested");
+      setReturnDialogOpen(false);
+      await loadReturn();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to request return";
+      toast.error(message);
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  };
 
   const handleCancel = React.useCallback(async () => {
     setIsCancelling(true);
@@ -250,8 +366,96 @@ export default function OrderDetailPageClient({
               {isCancelling ? "Cancelling…" : "Cancel order"}
             </Button>
           )}
+
+          {order.status === "delivered" &&
+            (existingReturn ? (
+              <div className="mt-6 space-y-2 rounded-md border p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Return request</span>
+                  <ReturnStatusBadge status={existingReturn.status} />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {existingReturn.reason}
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/returns">View return</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="mt-6"
+                onClick={openReturnDialog}
+                variant="outline"
+              >
+                Request a return
+              </Button>
+            ))}
         </section>
       </div>
+
+      <Dialog onOpenChange={setReturnDialogOpen} open={returnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request a return</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmitReturn}>
+            <div className="space-y-3">
+              {order.items.map((item) => (
+                <div className="flex items-center gap-3" key={item.id}>
+                  <Checkbox
+                    checked={selectedItemIds.has(item.id)}
+                    id={`return-item-${item.id}`}
+                    onCheckedChange={() => toggleItem(item.id)}
+                  />
+                  <Label
+                    className="flex-1 font-normal"
+                    htmlFor={`return-item-${item.id}`}
+                  >
+                    {item.productName}{" "}
+                    <span className="text-muted-foreground">
+                      (purchased {item.quantity})
+                    </span>
+                  </Label>
+                  <Input
+                    className="w-20"
+                    disabled={!selectedItemIds.has(item.id)}
+                    max={item.quantity}
+                    min={1}
+                    onChange={(event) =>
+                      setReturnQuantities({
+                        ...returnQuantities,
+                        [item.id]: Number(event.target.value),
+                      })
+                    }
+                    type="number"
+                    value={returnQuantities[item.id] ?? item.quantity}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="reason">Reason for return</Label>
+              <textarea
+                className={`
+                  flex min-h-20 w-full rounded-md border border-input
+                  bg-transparent px-3 py-2 text-sm shadow-xs outline-none
+                  focus-visible:border-ring focus-visible:ring-[3px]
+                  focus-visible:ring-ring/50
+                `}
+                id="reason"
+                onChange={(event) => setReturnReason(event.target.value)}
+                required
+                value={returnReason}
+              />
+            </div>
+            <DialogFooter>
+              <Button disabled={isSubmittingReturn} type="submit">
+                {isSubmittingReturn ? "Submitting…" : "Submit request"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

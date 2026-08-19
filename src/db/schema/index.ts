@@ -6,6 +6,10 @@ export * from "./payments/relations";
 export * from "./payments/tables";
 export * from "./payments/types";
 
+export * from "./returns/relations";
+export * from "./returns/tables";
+export * from "./returns/types";
+
 export * from "./reviews/relations";
 export * from "./reviews/tables";
 export * from "./reviews/types";
