@@ -36,6 +36,7 @@ export function Header({ showAuth = true }: HeaderProps) {
     { href: "/dashboard/profile", name: "Profile" },
     { href: "/dashboard/settings", name: "Settings" },
     { href: "/dashboard/uploads", name: "Uploads" },
+    { href: "/dashboard/addresses", name: "Addresses" },
     { href: "/admin/summary", name: "Admin" },
   ];
 

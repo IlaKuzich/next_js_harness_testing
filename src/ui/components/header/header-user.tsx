@@ -1,6 +1,7 @@
 import {
   BarChart,
   LogOut,
+  MapPin,
   Package,
   Settings,
   Shield,
@@ -117,6 +118,12 @@ export function HeaderUserDropdown({
           <Link className="cursor-pointer" href="/orders">
             <Package className="mr-2 h-4 w-4" />
             Orders
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link className="cursor-pointer" href="/dashboard/addresses">
+            <MapPin className="mr-2 h-4 w-4" />
+            Addresses
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
