@@ -152,9 +152,10 @@ export default function ProductsPage() {
     [addItem],
   );
 
+  // the heart toggle itself now lives in ProductCard via the shared
+  // useWishlist hook; this stays as an optional hook point for the page
   const handleAddToWishlist = React.useCallback((productId: string) => {
-    // TODO: integrate with Wishlist feature
-    console.log(`Added ${productId} to wishlist`);
+    console.log(`Wishlist toggled for ${productId}`);
   }, []);
 
   /* ----------------------------- Render --------------------------------- */

@@ -14,6 +14,10 @@ export * from "./uploads/relations";
 export * from "./uploads/tables";
 export * from "./uploads/types";
 
+export * from "./wishlists/relations";
+export * from "./wishlists/tables";
+export * from "./wishlists/types";
+
 // relations
 export * from "./users/relations";
 
