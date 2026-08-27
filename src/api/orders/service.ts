@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 import type { Order, OrderStatus } from "~/db/schema/orders/types";
@@ -81,7 +81,7 @@ export async function cancelOrderAsOwner(orderId: string, userId: string) {
     throw new Error("Only pending orders can be cancelled");
   }
 
-  return updateOrderStatus(orderId, "cancelled");
+  return updateOrderStatus(orderId, "cancelled", { expectedStatus: "pending" });
 }
 
 /**
@@ -174,13 +174,27 @@ export async function getOrdersForUser(userId: string) {
   });
 }
 
+export interface UpdateOrderStatusOptions {
+  /**
+   * Status the caller believes the order is currently in. When given, the
+   * update is rejected unless the order still has that status, so two
+   * concurrent transitions can't both win.
+   */
+  expectedStatus?: OrderStatus;
+}
+
 /**
- * Move an order to a new status. Throws if the order doesn't exist or the
- * transition isn't allowed from its current status.
+ * Move an order to a new status. Throws if the order doesn't exist, the
+ * transition isn't allowed from its current status, or the order moved out
+ * from under the caller's `expectedStatus`.
+ *
+ * Re-applying the status an order already has is a no-op rather than an
+ * error, so retried webhooks and double-clicked admin actions stay safe.
  */
 export async function updateOrderStatus(
   orderId: string,
   nextStatus: OrderStatus,
+  options: UpdateOrderStatusOptions = {},
 ) {
   const order = await db.query.ordersTable.findFirst({
     where: eq(ordersTable.id, orderId),
@@ -190,6 +204,16 @@ export async function updateOrderStatus(
     throw new Error("Order not found");
   }
 
+  if (options.expectedStatus && order.status !== options.expectedStatus) {
+    throw new Error(
+      `Order is "${order.status}", expected "${options.expectedStatus}"`,
+    );
+  }
+
+  if (order.status === nextStatus) {
+    return order;
+  }
+
   const allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS[order.status];
   if (!allowedNextStatuses.includes(nextStatus)) {
     throw new Error(
@@ -197,10 +221,19 @@ export async function updateOrderStatus(
     );
   }
 
-  await db
+  // guard on the status we read above so a racing transition loses instead of
+  // silently overwriting the winner
+  const changed = await db
     .update(ordersTable)
     .set({ status: nextStatus, updatedAt: new Date() })
-    .where(eq(ordersTable.id, orderId));
+    .where(
+      and(eq(ordersTable.id, orderId), eq(ordersTable.status, order.status)),
+    )
+    .returning({ id: ordersTable.id });
+
+  if (changed.length === 0) {
+    throw new Error("Order was updated by someone else, please retry");
+  }
 
   const updated = await getOrderById(orderId);
   if (!updated) {
