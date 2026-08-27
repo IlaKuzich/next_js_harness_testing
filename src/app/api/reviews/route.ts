@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createReview,
   deleteReview,
-  getReviewsForProduct,
+  listProductReviews,
 } from "~/api/reviews/service";
 import { getCurrentUser } from "~/lib/auth";
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const reviews = await getReviewsForProduct(productId);
+    const reviews = await listProductReviews(productId);
     return NextResponse.json({ reviews });
   } catch (error) {
     console.error("Error fetching reviews:", error);
@@ -112,8 +112,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    await deleteReview(reviewId, user.id);
-    return NextResponse.json({ success: true });
+    await deleteReview(user.id, reviewId);
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete review";
     console.error("Error deleting review:", error);

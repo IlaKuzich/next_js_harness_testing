@@ -236,9 +236,9 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         `/api/reviews?id=${encodeURIComponent(reviewId)}`,
         { method: "DELETE" },
       );
-      const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
         throw new Error(data.error ?? "Failed to delete review");
       }
 
