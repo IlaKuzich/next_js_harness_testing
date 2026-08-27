@@ -1,3 +1,7 @@
+export * from "./addresses/relations";
+export * from "./addresses/tables";
+export * from "./addresses/types";
+
 export * from "./orders/relations";
 export * from "./orders/tables";
 export * from "./orders/types";
