@@ -291,9 +291,9 @@ export default function OrderDetailPageClient({
                 <div className="flex-1">
                   <Link
                     className={`
-                    font-medium
-                    hover:underline
-                  `}
+                      font-medium
+                      hover:underline
+                    `}
                     href={`/products/${item.productId}`}
                   >
                     {item.productName}
@@ -443,13 +443,20 @@ export default function OrderDetailPageClient({
                   focus-visible:ring-ring/50
                 `}
                 id="reason"
+                maxLength={500}
                 onChange={(event) => setReturnReason(event.target.value)}
                 required
                 value={returnReason}
               />
+              <p className="text-xs text-muted-foreground">
+                {returnReason.trim().length}/500
+              </p>
             </div>
             <DialogFooter>
-              <Button disabled={isSubmittingReturn} type="submit">
+              <Button
+                disabled={isSubmittingReturn || returnReason.trim().length < 10}
+                type="submit"
+              >
                 {isSubmittingReturn ? "Submitting…" : "Submit request"}
               </Button>
             </DialogFooter>

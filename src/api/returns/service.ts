@@ -7,21 +7,21 @@ import { db } from "~/db";
 import { ordersTable, returnItemsTable, returnsTable } from "~/db/schema";
 
 const RETURN_WINDOW_DAYS = 30;
+const MIN_REASON_LENGTH = 10;
+const MAX_REASON_LENGTH = 500;
 
 /**
  * Which statuses a return may move to from its current status. Rejected,
  * refunded, and cancelled are terminal states.
  */
-const ALLOWED_RETURN_STATUS_TRANSITIONS: Record<
-  ReturnStatus,
-  ReturnStatus[]
-> = {
-  approved: ["refunded"],
-  cancelled: [],
-  refunded: [],
-  rejected: [],
-  requested: ["approved", "rejected", "cancelled"],
-};
+const ALLOWED_RETURN_STATUS_TRANSITIONS: Record<ReturnStatus, ReturnStatus[]> =
+  {
+    approved: ["refunded"],
+    cancelled: [],
+    refunded: [],
+    rejected: [],
+    requested: ["approved", "rejected", "cancelled"],
+  };
 
 const returnQueryOptions = {
   items: { with: { orderItem: true } },
@@ -36,6 +36,67 @@ export interface RequestReturnInput {
 }
 
 /**
+ * Cancel a return on behalf of its owner. Only requests still in the
+ * "requested" state may be self-cancelled by the customer.
+ */
+export async function cancelReturnAsOwner(returnId: string, userId: string) {
+  const existing = await db.query.returnsTable.findFirst({
+    where: eq(returnsTable.id, returnId),
+  });
+
+  if (!existing) {
+    throw new Error("Return not found");
+  }
+
+  if (existing.userId !== userId) {
+    throw new Error("You can only cancel your own return requests");
+  }
+
+  if (existing.status !== "requested") {
+    throw new Error("Only pending return requests can be cancelled");
+  }
+
+  return updateReturnStatus(returnId, "cancelled");
+}
+
+/** List every return in the system, newest first, with items and buyer. */
+export async function getAllReturns() {
+  return db.query.returnsTable.findMany({
+    orderBy: desc(returnsTable.createdAt),
+    with: {
+      ...returnQueryOptions,
+      user: { columns: { email: true, id: true, name: true } },
+    },
+  });
+}
+
+/** Get a single return with its items, or null if it doesn't exist. */
+export async function getReturnById(returnId: string) {
+  return db.query.returnsTable.findFirst({
+    where: eq(returnsTable.id, returnId),
+    with: returnQueryOptions,
+  });
+}
+
+/** List the returns filed against a specific order, newest first. */
+export async function getReturnsForOrder(orderId: string) {
+  return db.query.returnsTable.findMany({
+    orderBy: desc(returnsTable.createdAt),
+    where: eq(returnsTable.orderId, orderId),
+    with: returnQueryOptions,
+  });
+}
+
+/** List a user's return requests, newest first. */
+export async function getReturnsForUser(userId: string) {
+  return db.query.returnsTable.findMany({
+    orderBy: desc(returnsTable.createdAt),
+    where: eq(returnsTable.userId, userId),
+    with: returnQueryOptions,
+  });
+}
+
+/**
  * File a return request for a delivered order. Validates the order is
  * eligible, the requested items/quantities belong to it, and that there
  * isn't already an active return in flight for it.
@@ -43,8 +104,13 @@ export interface RequestReturnInput {
 export async function requestReturn(input: RequestReturnInput) {
   const { items, orderId, reason, userId } = input;
 
-  if (!reason.trim()) {
-    throw new Error("A reason is required");
+  const trimmedReason = reason.trim();
+  if (trimmedReason.length < MIN_REASON_LENGTH) {
+    throw new Error("Reason must be at least 10 characters");
+  }
+
+  if (trimmedReason.length > MAX_REASON_LENGTH) {
+    throw new Error("Reason must be at most 500 characters");
   }
 
   if (items.length === 0) {
@@ -98,9 +164,7 @@ export async function requestReturn(input: RequestReturnInput) {
     }
 
     if (!Number.isInteger(line.quantity) || line.quantity < 1) {
-      throw new Error(
-        `Invalid return quantity for "${orderItem.productName}"`,
-      );
+      throw new Error(`Invalid return quantity for "${orderItem.productName}"`);
     }
 
     if (line.quantity > orderItem.quantity) {
@@ -120,7 +184,7 @@ export async function requestReturn(input: RequestReturnInput) {
     createdAt: now,
     id: returnId,
     orderId,
-    reason: reason.trim(),
+    reason: trimmedReason,
     refundAmount: round2(refundAmount),
     updatedAt: now,
     userId,
@@ -140,43 +204,6 @@ export async function requestReturn(input: RequestReturnInput) {
     throw new Error("Failed to load return after creation");
   }
   return created;
-}
-
-/** List every return in the system, newest first, with items and buyer. */
-export async function getAllReturns() {
-  return db.query.returnsTable.findMany({
-    orderBy: desc(returnsTable.createdAt),
-    with: {
-      ...returnQueryOptions,
-      user: { columns: { email: true, id: true, name: true } },
-    },
-  });
-}
-
-/** Get a single return with its items, or null if it doesn't exist. */
-export async function getReturnById(returnId: string) {
-  return db.query.returnsTable.findFirst({
-    where: eq(returnsTable.id, returnId),
-    with: returnQueryOptions,
-  });
-}
-
-/** List the returns filed against a specific order, newest first. */
-export async function getReturnsForOrder(orderId: string) {
-  return db.query.returnsTable.findMany({
-    orderBy: desc(returnsTable.createdAt),
-    where: eq(returnsTable.orderId, orderId),
-    with: returnQueryOptions,
-  });
-}
-
-/** List a user's return requests, newest first. */
-export async function getReturnsForUser(userId: string) {
-  return db.query.returnsTable.findMany({
-    orderBy: desc(returnsTable.createdAt),
-    where: eq(returnsTable.userId, userId),
-    with: returnQueryOptions,
-  });
 }
 
 /**
@@ -218,30 +245,6 @@ export async function updateReturnStatus(
     throw new Error("Failed to load return after update");
   }
   return updated;
-}
-
-/**
- * Cancel a return on behalf of its owner. Only requests still in the
- * "requested" state may be self-cancelled by the customer.
- */
-export async function cancelReturnAsOwner(returnId: string, userId: string) {
-  const existing = await db.query.returnsTable.findFirst({
-    where: eq(returnsTable.id, returnId),
-  });
-
-  if (!existing) {
-    throw new Error("Return not found");
-  }
-
-  if (existing.userId !== userId) {
-    throw new Error("You can only cancel your own return requests");
-  }
-
-  if (existing.status !== "requested") {
-    throw new Error("Only pending return requests can be cancelled");
-  }
-
-  return updateReturnStatus(returnId, "cancelled");
 }
 
 /** Round to 2 decimal places, avoiding floating point drift. */
