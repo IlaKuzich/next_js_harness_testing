@@ -230,3 +230,26 @@ export const getCurrentUserOrRedirect = async (
   // if user is found and no okUrl is provided, return the user
   return user; // user is UserDbType here
 };
+
+// no role field on the user model yet, so admin access is gated by an
+// env-configured email allowlist instead
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+export const isAdminUser = (user: null | UserDbType): boolean =>
+  !!user && ADMIN_EMAILS.includes(user.email.toLowerCase());
+
+/** Like `getCurrentUserOrRedirect`, but also requires the user to be an admin. */
+export const getCurrentAdminUserOrRedirect = async (
+  forbiddenUrl = "/",
+): Promise<UserDbType> => {
+  const user = await getCurrentUserOrRedirect();
+
+  if (!isAdminUser(user)) {
+    redirect(forbiddenUrl);
+  }
+
+  return user as UserDbType;
+};

@@ -2,6 +2,7 @@ import {
   BarChart,
   LogOut,
   Package,
+  RotateCcw,
   Settings,
   Shield,
   Upload,
@@ -117,6 +118,12 @@ export function HeaderUserDropdown({
           <Link className="cursor-pointer" href="/orders">
             <Package className="mr-2 h-4 w-4" />
             Orders
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link className="cursor-pointer" href="/returns">
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Returns
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
