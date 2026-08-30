@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAllReturns } from "~/api/returns/service";
-import { getCurrentUser } from "~/lib/auth";
+import { getCurrentUser, isAdminUser } from "~/lib/auth";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -11,6 +11,10 @@ export async function GET() {
       { error: "Authentication required" },
       { status: 401 },
     );
+  }
+
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {

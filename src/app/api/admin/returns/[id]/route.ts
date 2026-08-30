@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { ReturnStatus } from "~/db/schema/returns/types";
 
 import { updateReturnStatus } from "~/api/returns/service";
-import { getCurrentUser } from "~/lib/auth";
+import { getCurrentUser, isAdminUser } from "~/lib/auth";
 
 const ADMIN_SETTABLE_STATUSES: ReturnStatus[] = [
   "approved",
@@ -22,6 +22,10 @@ export async function PATCH(
       { error: "Authentication required" },
       { status: 401 },
     );
+  }
+
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await params;

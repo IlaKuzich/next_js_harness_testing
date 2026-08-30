@@ -2,18 +2,12 @@ import type React from "react";
 
 import Link from "next/link";
 
-import { getCurrentUserOrRedirect } from "~/lib/auth";
+import { getCurrentAdminUserOrRedirect } from "~/lib/auth";
 
 export default async function AdminLayout({
   children,
 }: { children: React.ReactNode }) {
-  await getCurrentUserOrRedirect();
-
-  // TODO: implement admin check
-  // const user = await getCurrentUserOrRedirect();
-  // if (!user?.isAdmin) {
-  //   redirect("/");
-  // }
+  await getCurrentAdminUserOrRedirect();
 
   return (
     <div className="container mx-auto py-10">
